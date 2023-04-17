@@ -17,8 +17,35 @@ public class Server {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server started on port " + PORT);
 
-            // Thread pool to create game threads
-            ExecutorService threadPool = Executors.newFixedThreadPool(MAX_GAMES);
+            // Create thread pool to manage games
+            ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+                    MAX_GAMES, MAX_GAMES, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>());
+
+            // Create thread to handle broken connections
+            Thread brokenConnectionHandler = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        for (Socket player : waitingPlayers) {
+                            try {
+                                player.sendUrgentData(0);
+                            } catch (IOException e) {
+                                // Player has disconnected
+                                System.out.println("Player disconnected: " + player.getInetAddress());
+                                waitingPlayers.remove(player);
+                            }
+                        }
+                        try {
+                            Thread.sleep(5000);
+                        } catch (InterruptedException e) {
+                            // Ignore
+                        }
+                    }
+                }
+            });
+            brokenConnectionHandler.setDaemon(true);
+            brokenConnectionHandler.start();
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -61,13 +88,58 @@ public class Server {
                 String password = in.readLine();
                 boolean isRegistered = registerUser(username, password);
                 out.println(isRegistered);
-            } else {
-                // Handle game logic
+            } else if (command.equals("simple")) {
+                synchronized (waitingPlayers) {
+                    waitingPlayers.add(clientSocket);
+                    if (waitingPlayers.size() >= GAME_SIZE) {
+                        List<Socket> gamePlayers = new ArrayList<>();
+                        for (int i = 0; i < GAME_SIZE; i++) {
+                            gamePlayers.add(waitingPlayers.remove(0));
+                        }
+                        Game game = new Game(gamePlayers);
+                        games.add(game);
+                        game.start();
+                    }
+                }
+            } else if (command.equals("rank")) {
+                String token = in.readLine();
+                User user = tokens.get(token);
+                if (user == null) {
+                    out.println("ERROR");
+                    out.println("Invalid authentication token.");
+                    return;
+                }
+                synchronized (waitingPlayers) {
+                    // Generate a new token for the player if they don't have one
+                    String playerToken = userToken.get(clientSocket.toString());
+                    if (playerToken == null) {
+                        playerToken = generateToken();
+                        userToken.put(clientSocket.toString(), playerToken);
+                    }
+                    user.setToken(playerToken);
+
+                    waitingPlayers.add(clientSocket);
+                    if (waitingPlayers.size() >= GAME_SIZE) {
+                        List<Socket> gamePlayers = new ArrayList<>();
+                        List<User> gameUsers = new ArrayList<>();
+                        for (int i = 0; i < GAME_SIZE; i++) {
+                            Socket playerSocket = waitingPlayers.remove(0);
+                            String playerToken = userToken.get(playerSocket.toString());
+                            User playerUser = tokens.get(playerToken);
+                            gamePlayers.add(playerSocket);
+                            gameUsers.add(playerUser);
+                        }
+                        Game game = new Game(gamePlayers, gameUsers);
+                        games.add(game);
+                        game.start();
+                    }
+                }
             }
         } catch (IOException e) {
             System.err.println("Error handling client: " + e.getMessage());
         }
     }
+
 
     private static boolean authenticateUser(String username, String password) {
         String storedPassword = userDatabase.get(username);
