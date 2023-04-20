@@ -35,6 +35,7 @@ public class ClientHandler implements Runnable {
                     String[] credentials = (String[]) authMessage.getPayload();
                     if (server.authenticate(credentials[0], credentials[1])) {
                         sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
+                        server.matchmaking(this);
                         break;
                     } else {
                         sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "Invalid username or password."));

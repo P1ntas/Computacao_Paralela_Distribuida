@@ -11,6 +11,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.Queue;
+
 
 public class Server {
     private int port;
@@ -18,12 +21,14 @@ public class Server {
     private ExecutorService executorService;
     private static final String USER_DATA_FILE = "../databases/users.txt";
     private Map<String, User> registeredUsers;
+    private Queue<ClientHandler> waitingPlayers;
 
 
     public Server(int port) {
         this.port = port;
         this.executorService = Executors.newFixedThreadPool(5);
         registeredUsers = new HashMap<>();
+        waitingPlayers = new LinkedList<>();
         loadUserData();
     }
 
@@ -91,6 +96,19 @@ public class Server {
             writer.newLine();
         } catch (IOException e) {
             System.err.println("Error saving user data: " + e.getMessage());
+        }
+    }
+
+    public void matchmaking(ClientHandler player) {
+        synchronized (waitingPlayers) {
+            if (!waitingPlayers.isEmpty()) {
+                System.out.println("Hi\n");
+                ClientHandler opponent = waitingPlayers.poll();
+                Game game = new Game(player, opponent);
+                game.play();
+            } else {
+                waitingPlayers.add(player);
+            }
         }
     }
 }
