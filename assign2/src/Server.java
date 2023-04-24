@@ -102,7 +102,6 @@ public class Server {
     public void matchmaking(ClientHandler player) {
         synchronized (waitingPlayers) {
             if (!waitingPlayers.isEmpty()) {
-                System.out.println("Hi\n");
                 ClientHandler opponent = waitingPlayers.poll();
                 Game game = new Game(player, opponent);
                 game.play();

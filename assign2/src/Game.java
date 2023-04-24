@@ -36,7 +36,7 @@ public class Game {
             }
 
             try {
-                player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Your move: " + moves[0].getPayload() + ", opponent's move: " + moves[1].getPayload()));
+                player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Your move: " + moves[1].getPayload() + ", opponent's move: " + moves[0].getPayload()));
                 player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Your move: " + moves[1].getPayload() + ", opponent's move: " + moves[0].getPayload()));
             } catch (IOException e) {
                 e.printStackTrace();

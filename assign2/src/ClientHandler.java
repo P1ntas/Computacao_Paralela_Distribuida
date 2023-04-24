@@ -17,11 +17,13 @@ public class ClientHandler implements Runnable {
 
     }
 
-    public void sendMessage(Message message) throws IOException {
+    public synchronized void sendMessage(Message message) throws IOException {
         out.writeObject(message);
+        out.flush();
+        out.reset();
     }
 
-    public Message receiveMessage() throws IOException, ClassNotFoundException {
+    public synchronized Message receiveMessage() throws IOException, ClassNotFoundException {
         return (Message) in.readObject();
     }
 

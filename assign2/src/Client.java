@@ -71,6 +71,9 @@ public class Client {
 
             // Game communication
             while (true) {
+                Message receivedMessage = client.receiveMessage();
+                System.out.println("Received from server: " + receivedMessage.getPayload());
+
                 System.out.print("Enter a message to send (or type 'exit' to quit): ");
                 String messageText = scanner.nextLine();
 
@@ -80,9 +83,6 @@ public class Client {
 
                 Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
                 client.sendMessage(message);
-
-                Message receivedMessage = client.receiveMessage();
-                System.out.println("Received from server: " + receivedMessage.getPayload());
             }
 
             client.close();
