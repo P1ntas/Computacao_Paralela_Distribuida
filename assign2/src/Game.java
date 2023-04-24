@@ -7,10 +7,51 @@ public class Game {
     private int rounds;
     private static final int MAX_ROUNDS = 4;
 
-    public Game(ClientHandler player1, ClientHandler player2) {
+    private Server server;
+
+    public Game(ClientHandler player1, ClientHandler player2, Server server) {
         this.player1 = player1;
         this.player2 = player2;
         this.rounds = 0;
+        this.server = server;
+    }
+
+    private boolean[] askForRematch(ClientHandler player1, ClientHandler player2) {
+        boolean[] rematchResponses = new boolean[2];
+
+        Thread player1Thread = new Thread(() -> {
+            try {
+                player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
+                Message response = player1.receiveMessage();
+                rematchResponses[0] = "yes".equalsIgnoreCase(response.getPayload().toString());
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+                rematchResponses[0] = false;
+            }
+        });
+
+        Thread player2Thread = new Thread(() -> {
+            try {
+                player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
+                Message response = player2.receiveMessage();
+                rematchResponses[1] = "yes".equalsIgnoreCase(response.getPayload().toString());
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+                rematchResponses[1] = false;
+            }
+        });
+
+        player1Thread.start();
+        player2Thread.start();
+
+        try {
+            player1Thread.join();
+            player2Thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return rematchResponses;
     }
 
     public void play() {
@@ -52,17 +93,19 @@ public class Game {
         try {
             player1.sendMessage(player1Result);
             player2.sendMessage(player2Result);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        try {
-            player1.sendMessage(player1Result);
-            player2.sendMessage(player2Result);
+            boolean[] rematchResponses = askForRematch(player1, player2);
+            boolean player1WantsRematch = rematchResponses[0];
+            boolean player2WantsRematch = rematchResponses[1];
 
-            // Close the resources after sending the game results
-            player1.close();
-            player2.close();
+            if (player1WantsRematch) server.matchmaking(player1);
+            if (player2WantsRematch) server.matchmaking(player2);
+
+            if (!player1WantsRematch && !player2WantsRematch) {
+                // Close the resources if both players don't want to play again
+                player1.close();
+                player2.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

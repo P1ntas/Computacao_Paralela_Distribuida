@@ -103,7 +103,7 @@ public class Server {
         synchronized (waitingPlayers) {
             if (!waitingPlayers.isEmpty()) {
                 ClientHandler opponent = waitingPlayers.poll();
-                Game game = new Game(player, opponent);
+                Game game = new Game(player, opponent, this);
                 game.play();
             } else {
                 waitingPlayers.add(player);
