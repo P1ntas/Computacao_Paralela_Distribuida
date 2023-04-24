@@ -8,6 +8,7 @@ public class Client {
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
+    private boolean isTurn;
 
     public Client(String serverAddress, int serverPort) throws IOException {
         socket = new Socket(serverAddress, serverPort);
@@ -25,6 +26,10 @@ public class Client {
 
     public void close() throws IOException {
         socket.close();
+    }
+
+    public void setTurn(boolean isTurn) {
+        this.isTurn = isTurn;
     }
 
     public static void main(String[] args) {
@@ -70,19 +75,29 @@ public class Client {
             }
 
             // Game communication
+            Client clientInstance = client;
             while (true) {
                 Message receivedMessage = client.receiveMessage();
                 System.out.println("Received from server: " + receivedMessage.getPayload());
 
-                System.out.print("Enter a message to send (or type 'exit' to quit): ");
-                String messageText = scanner.nextLine();
-
-                if (messageText.equalsIgnoreCase("exit")) {
-                    break;
+                // Check for the GAME_UPDATE message type and update the isTurn field
+                if (receivedMessage.getMessageType() == Message.MessageType.GAME_UPDATE) {
+                    String payload = (String) receivedMessage.getPayload();
+                    clientInstance.setTurn(payload.startsWith("Round"));
                 }
 
-                Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
-                client.sendMessage(message);
+                // Only allow input when it's the client's turn
+                if (clientInstance.isTurn) {
+                    System.out.print("Enter a message to send (or type 'exit' to quit): ");
+                    String messageText = scanner.nextLine();
+
+                    if (messageText.equalsIgnoreCase("exit")) {
+                        break;
+                    }
+
+                    Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
+                    client.sendMessage(message);
+                }
             }
 
             client.close();

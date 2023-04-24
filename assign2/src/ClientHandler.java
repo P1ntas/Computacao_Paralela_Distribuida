@@ -8,13 +8,13 @@ public class ClientHandler implements Runnable {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private Server server;
+    private boolean turn; // Added a field to store the player's turn
 
     public ClientHandler(Socket socket, Server server) throws IOException {
         this.socket = socket;
         out = new ObjectOutputStream(socket.getOutputStream());
         in = new ObjectInputStream(socket.getInputStream());
         this.server = server;
-
     }
 
     public synchronized void sendMessage(Message message) throws IOException {
@@ -25,6 +25,15 @@ public class ClientHandler implements Runnable {
 
     public synchronized Message receiveMessage() throws IOException, ClassNotFoundException {
         return (Message) in.readObject();
+    }
+
+    // Added a getter and setter for the turn field
+    public boolean isTurn() {
+        return turn;
+    }
+
+    public void setTurn(boolean turn) {
+        this.turn = turn;
     }
 
     @Override
@@ -59,6 +68,17 @@ public class ClientHandler implements Runnable {
             // ...
         } finally {
             // ...
+        }
+    }
+
+    public void close() {
+        try {
+            in.close();
+            out.close();
+            socket.close();
+            System.out.println("Disconnected from the server.");
+        } catch (IOException e) {
+            System.err.println("Error while closing resources: " + e.getMessage());
         }
     }
 }

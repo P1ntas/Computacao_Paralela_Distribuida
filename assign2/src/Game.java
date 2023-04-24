@@ -14,30 +14,30 @@ public class Game {
     }
 
     public void play() {
-        ClientHandler currentPlayer;
-        ClientHandler opponentPlayer;
         boolean isPlayer1Turn = new Random().nextBoolean();
-        Message[] moves = new Message[2];
 
         while (rounds < MAX_ROUNDS) {
             rounds++;
 
             for (int i = 0; i < 2; i++) {
-                currentPlayer = isPlayer1Turn ? player1 : player2;
-                opponentPlayer = isPlayer1Turn ? player2 : player1;
-                isPlayer1Turn = !isPlayer1Turn;
+                ClientHandler currentPlayer = isPlayer1Turn ? player1 : player2;
+                ClientHandler opponentPlayer = isPlayer1Turn ? player2 : player1;
 
+                currentPlayer.setTurn(true);
+                opponentPlayer.setTurn(false);
                 try {
                     currentPlayer.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Round " + rounds + ": Send your move."));
-                    moves[i] = currentPlayer.receiveMessage();
+                    Message move = currentPlayer.receiveMessage();
+                    currentPlayer.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Waiting for opponent's move..."));
+                    isPlayer1Turn = !isPlayer1Turn;
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             }
 
             try {
-                player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Your move: " + moves[1].getPayload() + ", opponent's move: " + moves[0].getPayload()));
-                player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Your move: " + moves[1].getPayload() + ", opponent's move: " + moves[0].getPayload()));
+                player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Both moves received. Proceeding to the next round."));
+                player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Both moves received. Proceeding to the next round."));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -52,6 +52,17 @@ public class Game {
         try {
             player1.sendMessage(player1Result);
             player2.sendMessage(player2Result);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            player1.sendMessage(player1Result);
+            player2.sendMessage(player2Result);
+
+            // Close the resources after sending the game results
+            player1.close();
+            player2.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
