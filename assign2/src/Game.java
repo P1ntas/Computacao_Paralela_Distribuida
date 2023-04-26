@@ -98,14 +98,13 @@ public class Game {
             boolean player1WantsRematch = rematchResponses[0];
             boolean player2WantsRematch = rematchResponses[1];
 
+            // Add players who want a rematch back to the matchmaking queue
             if (player1WantsRematch) server.matchmaking(player1);
-            if (player2WantsRematch) server.matchmaking(player2);
+            else player1.close();
 
-            if (!player1WantsRematch && !player2WantsRematch) {
-                // Close the resources if both players don't want to play again
-                player1.close();
-                player2.close();
-            }
+            if (player2WantsRematch) server.matchmaking(player2);
+            else player2.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
