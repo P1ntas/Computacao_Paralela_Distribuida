@@ -1,0 +1,3 @@
+admin:admin
+test:test
+aaa:aaa
