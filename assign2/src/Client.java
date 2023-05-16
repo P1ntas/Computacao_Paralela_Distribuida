@@ -86,7 +86,7 @@ public class Client {
                     clientInstance.setTurn(payload.startsWith("Round"));
                 }
 
-                // Only allow input when it's the client's turn
+                // Only allow input when it's the client's turn or when asked for a rematch
                 if (clientInstance.isTurn) {
                     System.out.print("Enter a message to send (or type 'exit' to quit): ");
                     String messageText = scanner.nextLine();
@@ -94,11 +94,23 @@ public class Client {
                     if (messageText.equalsIgnoreCase("exit")) {
                         break;
                     }
-
                     Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
                     client.sendMessage(message);
                 }
+                if ("Do you want to play again? (yes/no)".equals(receivedMessage.getPayload())) {
+                    System.out.print("Enter a message to send (or type 'exit' to quit): ");
+                    String messageText = scanner.nextLine();
+                    if (messageText.equalsIgnoreCase("no")) break;
+
+                    else if (messageText.equalsIgnoreCase("yes")) {
+                        Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
+                        client.sendMessage(message);
+                    }
+                    continue;
+                }
+
             }
+
 
             client.close();
             scanner.close();

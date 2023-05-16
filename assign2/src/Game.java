@@ -5,7 +5,7 @@ public class Game {
     private final ClientHandler player1, player2;
 
     private int rounds;
-    private static final int MAX_ROUNDS = 4;
+    private static final int MAX_ROUNDS = 2;
 
     private Server server;
 
@@ -24,6 +24,8 @@ public class Game {
                 player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
                 Message response = player1.receiveMessage();
                 rematchResponses[0] = "yes".equalsIgnoreCase(response.getPayload().toString());
+                System.out.println(rematchResponses[0]);
+
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
                 rematchResponses[0] = false;
@@ -35,6 +37,7 @@ public class Game {
                 player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
                 Message response = player2.receiveMessage();
                 rematchResponses[1] = "yes".equalsIgnoreCase(response.getPayload().toString());
+                System.out.println(rematchResponses[1]);
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
                 rematchResponses[1] = false;
