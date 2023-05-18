@@ -2,18 +2,21 @@ import java.util.Random;
 import java.io.IOException;
 
 public class Game {
-    private final ClientHandler player1, player2;
+    private ClientHandler player1, player2;
 
     private int rounds;
     private static final int MAX_ROUNDS = 2;
 
     private Server server;
 
-    public Game(ClientHandler player1, ClientHandler player2, Server server) {
+    private String mode;
+
+    public Game(ClientHandler player1, ClientHandler player2, Server server, String mode) {
         this.player1 = player1;
         this.player2 = player2;
         this.rounds = 0;
         this.server = server;
+        this.mode = mode;
     }
 
     private boolean[] askForRematch(ClientHandler player1, ClientHandler player2) {
@@ -94,10 +97,13 @@ public class Game {
         Message player2Result = new Message(Message.MessageType.GAME_END, player1Wins ? "You lost!" : "You won!");
 
         System.out.println("result1: "+ player1Wins); // false
-        if(player1Wins) {
-            server.updateScores(player1.getUsername(), player2.getUsername());
-        } else if(!player1Wins){
-            server.updateScores(player2.getUsername(), player1.getUsername());
+
+        if (mode.equals("rank")) {
+            if (player1Wins) {
+                server.updateScores(player1.getUsername(), player2.getUsername());
+            } else if (!player1Wins) {
+                server.updateScores(player2.getUsername(), player1.getUsername());
+            }
         }
 
 
@@ -110,14 +116,39 @@ public class Game {
             boolean player2WantsRematch = rematchResponses[1];
 
             // Add players who want a rematch back to the matchmaking queue
-            if (player1WantsRematch) server.matchmaking(player1);
+            if (player1WantsRematch) {
+                if (mode.equals("simple")) server.simpleMatchmaking(player1);
+                else if (mode.equals("rank")) server.rankMatchmaking(player1);
+            }
             else player1.close();
 
-            if (player2WantsRematch) server.matchmaking(player2);
+            if (player2WantsRematch) {
+                if (mode.equals("simple")) server.simpleMatchmaking(player2);
+                else if (mode.equals("rank")) server.rankMatchmaking(player2);
+            }
             else player2.close();
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    public void reconnectPlayer(ClientHandler player) {
+        // Reconnect the player and remove the disconnect timer
+        if (player1.getUsername().equals(player.getUsername())) {
+            player1 = player;
+        } else if (player2.getUsername().equals(player.getUsername())) {
+            player2 = player;
+        }
+        // Resume the game if both players are connected
+    }
+
+    public void closeIfDisconnected() {
+        if (player1.isDisconnected() && player2.isDisconnected()) {
+            server.removeOngoingGame(player1.getUsername());
+            server.removeOngoingGame(player2.getUsername());
+        }
+    }
+
+
 }

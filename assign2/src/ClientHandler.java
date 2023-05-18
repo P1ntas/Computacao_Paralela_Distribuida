@@ -45,6 +45,17 @@ public class ClientHandler implements Runnable {
         this.turn = turn;
     }
 
+    private boolean disconnected = false;
+
+    public boolean isDisconnected() {
+        return disconnected;
+    }
+
+    public void setDisconnected(boolean disconnected) {
+        this.disconnected = disconnected;
+    }
+
+
     @Override
     public void run() {
         try {
@@ -54,12 +65,37 @@ public class ClientHandler implements Runnable {
                 if (authMessage.getMessageType() == Message.MessageType.AUTHENTICATION) {
                     String[] credentials = (String[]) authMessage.getPayload();
                     if (server.authenticate(credentials[0], credentials[1])) {
-                        setUsername(credentials[0]); // Set the username after successful authentication
-                        sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
-                        server.matchmaking(this);
+                        Game ongoingGame = server.getOngoingGame(credentials[0]);
+                        if (ongoingGame != null) {
+                            ongoingGame.reconnectPlayer(this);
+                            sendMessage(new Message(Message.MessageType.RECONNECT_ACK, "Reconnected to ongoing game."));
+                        } else {
+                            setUsername(credentials[0]); // Set the username after successful authentication
+                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
+                            Message gameModeMessage = receiveMessage();
+                            String gameMode = (String) gameModeMessage.getPayload();
+                            System.out.println("gameMode:"+ gameMode);
+                            if (gameMode.equalsIgnoreCase("simple")) {
+                                System.out.println();
+                                server.simpleMatchmaking(this);
+                                break;
+                            } else if ("rank".equalsIgnoreCase(gameMode)) {
+                                server.rankMatchmaking(this);
+                                break;
+                            } else {
+                                sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
+                                break;
+                            }
+
+                            //server.matchmaking(this);
+                        }
                         break;
                     } else {
-                        sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "Invalid username or password."));
+                        if (!server.authenticate(credentials[0],credentials[1])) {
+                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "User is already logged in on another device."));
+                        } else {
+                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "Invalid username or password."));
+                        }
                     }
                 } else if (authMessage.getMessageType() == Message.MessageType.REGISTRATION) {
                     String[] credentials = (String[]) authMessage.getPayload();
@@ -71,8 +107,22 @@ public class ClientHandler implements Runnable {
                 }
             }
 
-            // Game communication
-            // ...
+            /*sendMessage(new Message(Message.MessageType.SELECT_GAME_MODE, null));
+            Message gameModeMessage = receiveMessage();
+
+            if (gameModeMessage.getMessageType() == Message.MessageType.SELECT_GAME_MODE) {
+                String gameMode = (String) gameModeMessage.getPayload();
+
+                // Proceed with the chosen game mode
+                if ("simple".equalsIgnoreCase(gameMode)) {
+                    server.matchmaking(this);
+                } else if ("rank".equalsIgnoreCase(gameMode)) {
+                    server.rankMatchmaking(this);
+                } else {
+                    sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
+                }
+            }*/
+
 
         } catch (IOException | ClassNotFoundException e) {
             // ...
@@ -86,6 +136,9 @@ public class ClientHandler implements Runnable {
             in.close();
             out.close();
             socket.close();
+            server.logoutUser(username);
+            // Schedule the game to be removed after 60 seconds
+            server.scheduleGameRemoval(username, 60);
             System.out.println("Disconnected from the server.");
         } catch (IOException e) {
             System.err.println("Error while closing resources: " + e.getMessage());

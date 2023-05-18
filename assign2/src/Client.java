@@ -77,6 +77,28 @@ public class Client {
             // Game communication
             Client clientInstance = client;
             while (true) {
+                System.out.println("select mode (Simple/Rank): ");
+                String mode = scanner.nextLine();
+                if (mode.equalsIgnoreCase("simple")) {
+                    Message simple = new Message(Message.MessageType.SELECT_GAME_MODE, mode);
+                    clientInstance.sendMessage(simple);
+                    break;
+
+                } else if(mode.equalsIgnoreCase("Rank")){
+                    Message rankMode = new Message(Message.MessageType.SELECT_GAME_MODE, mode);
+                    clientInstance.sendMessage(rankMode);
+                    break;
+                }
+                Message response = client.receiveMessage();
+                if(response.getMessageType() == Message.MessageType.GAME_MODE_ACK){
+                    System.out.println(response.getPayload());
+                    break;
+                }
+                else if (response.getMessageType() == Message.MessageType.GAME_MODE_ERROR){
+                    System.out.println(response.getPayload());
+                }
+            }
+            while (true) {
                 Message receivedMessage = client.receiveMessage();
                 System.out.println("Received from server: " + receivedMessage.getPayload());
 

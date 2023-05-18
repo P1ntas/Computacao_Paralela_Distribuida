@@ -2,7 +2,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.HashMap;
 import java.util.Map;
 import java.io.BufferedReader;
@@ -13,6 +12,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
 
 
 public class Server {
@@ -21,15 +27,23 @@ public class Server {
     private ExecutorService executorService;
     private static final String USER_DATA_FILE = "../databases/users.txt";
     private Map<String, User> registeredUsers;
-    private Queue<ClientHandler> waitingPlayers;
+    private Queue<ClientHandler> simpleWaitingPlayers;
+    private Queue<ClientHandler> rankWaitingPlayers;
+    private Set<String> loggedInUsers;
+    private Map<String, Game> ongoingGames;
 
 
     public Server(int port) {
         this.port = port;
         this.executorService = Executors.newFixedThreadPool(5);
         registeredUsers = new HashMap<>();
-        waitingPlayers = new LinkedList<>();
+        simpleWaitingPlayers = new LinkedList<>();
+        rankWaitingPlayers = new LinkedList<>();
         loadUserData();
+        this.loggedInUsers = new HashSet<>();
+        this.ongoingGames = new ConcurrentHashMap<>();
+
+
     }
 
     public void start() throws IOException {
@@ -63,7 +77,21 @@ public class Server {
 
     public boolean authenticate(String username, String password) {
         User user = registeredUsers.get(username);
-        return user != null && user.getPassword().equals(password);
+        if (user != null && user.getPassword().equals(password)) {
+            if (loggedInUsers.contains(username)) {
+                return false; // User is already logged in
+            } else {
+                loggedInUsers.add(username);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void logoutUser(String username) {
+        synchronized (loggedInUsers) {
+            loggedInUsers.remove(username);
+        }
     }
 
     public boolean registerUser(String username, String password) {
@@ -113,8 +141,19 @@ public class Server {
         saveUserData();
     }
 
+    public void simpleMatchmaking(ClientHandler player) {
+        synchronized (simpleWaitingPlayers) {
+            if (!simpleWaitingPlayers.isEmpty()) {
+                ClientHandler opponent = simpleWaitingPlayers.poll();
+                Game game = new Game(player, opponent, this, "simple");
+                game.play();
+            } else {
+                simpleWaitingPlayers.add(player);
+            }
+        }
+    }
 
-    public void matchmaking(ClientHandler player) {
+    /*public void matchmaking(ClientHandler player) {
         synchronized (waitingPlayers) {
             User playerUser = registeredUsers.get(player.getUsername());
             int playerScore = playerUser.getScore();
@@ -143,5 +182,58 @@ public class Server {
                 waitingPlayers.add(player);
             }
         }
+    }*/
+
+    public void rankMatchmaking(ClientHandler player) {
+        synchronized (rankWaitingPlayers) {
+            User playerUser = registeredUsers.get(player.getUsername());
+
+            // Find an opponent with a similar level
+            ClientHandler opponent = null;
+            Iterator<ClientHandler> waitingPlayerIterator = rankWaitingPlayers.iterator();
+            while (waitingPlayerIterator.hasNext()) {
+                ClientHandler waitingPlayer = waitingPlayerIterator.next();
+                User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
+
+                // You can adjust the difference between the levels as needed.
+                if (Math.abs(playerUser.getLevel() - waitingUser.getLevel()) <= 5) {
+                    opponent = waitingPlayer;
+                    waitingPlayerIterator.remove();
+                    break;
+                }
+            }
+
+            if (opponent != null) {
+                Game game = new Game(player, opponent, this, "rank");
+                game.play();
+            } else {
+                rankWaitingPlayers.add(player);
+            }
+        }
     }
+
+
+    public void addOngoingGame(String username, Game game) {
+        ongoingGames.put(username, game);
+    }
+
+    public void removeOngoingGame(String username) {
+        ongoingGames.remove(username);
+    }
+
+    public void scheduleGameRemoval(String username, int timeout) {
+        Game game = ongoingGames.get(username);
+        if (game != null) {
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+            scheduler.schedule(() -> {
+                removeOngoingGame(username);
+                game.closeIfDisconnected(); // Close the game if both players are disconnected
+            }, timeout, TimeUnit.SECONDS);
+        }
+    }
+
+    public Game getOngoingGame(String username) {
+        return ongoingGames.get(username);
+    }
+
 }
