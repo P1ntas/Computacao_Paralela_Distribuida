@@ -70,19 +70,22 @@ public class Server {
         if (registeredUsers.containsKey(username)) {
             return false;
         } else {
-            registeredUsers.put(username, new User(username, password));
-            saveUserData(username, password);
+            int initialScore = 0;
+            registeredUsers.put(username, new User(username, password, initialScore));
+            saveUserData();
             return true;
         }
     }
+
 
     private void loadUserData() {
         try (BufferedReader reader = new BufferedReader(new FileReader(USER_DATA_FILE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] data = line.split(":");
-                if (data.length == 2) {
-                    registeredUsers.put(data[0], new User(data[0], data[1]));
+                if (data.length == 3) {
+                    int score = Integer.parseInt(data[2]);
+                    registeredUsers.put(data[0], new User(data[0], data[1], score));
                 }
             }
         } catch (IOException e) {
@@ -90,20 +93,51 @@ public class Server {
         }
     }
 
-    private void saveUserData(String username, String password) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_DATA_FILE, true))) {
-            writer.write(username + ":" + password);
-            writer.newLine();
+
+    private void saveUserData() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_DATA_FILE))) {
+            for (User user : registeredUsers.values()) {
+                writer.write(user.getUsername() + ":" + user.getPassword() + ":" + user.getScore());
+                writer.newLine();
+            }
         } catch (IOException e) {
             System.err.println("Error saving user data: " + e.getMessage());
         }
     }
 
+    public void updateScores(String winner, String loser) {
+        User winnerUser = registeredUsers.get(winner);
+        User loserUser = registeredUsers.get(loser);
+        winnerUser.setScore(winnerUser.getScore() + 10);
+        loserUser.setScore(loserUser.getScore() - 5);
+        saveUserData();
+    }
+
+
     public void matchmaking(ClientHandler player) {
         synchronized (waitingPlayers) {
-            if (!waitingPlayers.isEmpty()) {
-                ClientHandler opponent = waitingPlayers.poll();
-                Game game = new Game(player, opponent, this);
+            User playerUser = registeredUsers.get(player.getUsername());
+            int playerScore = playerUser.getScore();
+
+            System.out.println(playerScore);
+
+            ClientHandler bestMatch = null;
+            int bestMatchDifference = Integer.MAX_VALUE;
+
+            for (ClientHandler waitingPlayer : waitingPlayers) {
+                User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
+                int waitingScore = waitingUser.getScore();
+                int scoreDifference = Math.abs(playerScore - waitingScore);
+
+                if (scoreDifference < bestMatchDifference) {
+                    bestMatchDifference = scoreDifference;
+                    bestMatch = waitingPlayer;
+                }
+            }
+
+            if (bestMatch != null) {
+                waitingPlayers.remove(bestMatch);
+                Game game = new Game(player, bestMatch, this);
                 game.play();
             } else {
                 waitingPlayers.add(player);

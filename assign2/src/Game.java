@@ -93,6 +93,14 @@ public class Game {
         Message player1Result = new Message(Message.MessageType.GAME_END, player1Wins ? "You won!" : "You lost!");
         Message player2Result = new Message(Message.MessageType.GAME_END, player1Wins ? "You lost!" : "You won!");
 
+        System.out.println("result1: "+ player1Wins); // false
+        if(player1Wins) {
+            server.updateScores(player1.getUsername(), player2.getUsername());
+        } else if(!player1Wins){
+            server.updateScores(player2.getUsername(), player1.getUsername());
+        }
+
+
         try {
             player1.sendMessage(player1Result);
             player2.sendMessage(player2Result);

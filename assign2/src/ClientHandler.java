@@ -8,7 +8,8 @@ public class ClientHandler implements Runnable {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private Server server;
-    private boolean turn; // Added a field to store the player's turn
+    private boolean turn;
+    private String username;// Added a field to store the player's turn
 
     public ClientHandler(Socket socket, Server server) throws IOException {
         this.socket = socket;
@@ -25,6 +26,14 @@ public class ClientHandler implements Runnable {
 
     public synchronized Message receiveMessage() throws IOException, ClassNotFoundException {
         return (Message) in.readObject();
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     // Added a getter and setter for the turn field
@@ -45,6 +54,7 @@ public class ClientHandler implements Runnable {
                 if (authMessage.getMessageType() == Message.MessageType.AUTHENTICATION) {
                     String[] credentials = (String[]) authMessage.getPayload();
                     if (server.authenticate(credentials[0], credentials[1])) {
+                        setUsername(credentials[0]); // Set the username after successful authentication
                         sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
                         server.matchmaking(this);
                         break;
