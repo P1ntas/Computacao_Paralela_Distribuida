@@ -70,29 +70,41 @@ public class ClientHandler implements Runnable {
                             ongoingGame.reconnectPlayer(this);
                             sendMessage(new Message(Message.MessageType.RECONNECT_ACK, "Reconnected to ongoing game."));
                         } else {
-                            setUsername(credentials[0]); // Set the username after successful authentication
+                            String token = server.getToken(credentials[0]);
+                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK,token));
+                            setUsername(credentials[0]);
                             sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
                             Message gameModeMessage = receiveMessage();
                             String gameMode = (String) gameModeMessage.getPayload();
                             System.out.println("gameMode:"+ gameMode);
                             if (gameMode.equalsIgnoreCase("simple")) {
-                                System.out.println();
                                 server.simpleMatchmaking(this);
+                                sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
                                 break;
                             } else if ("rank".equalsIgnoreCase(gameMode)) {
                                 server.rankMatchmaking(this);
+                                sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
                                 break;
                             } else {
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
                                 break;
                             }
-
-                            //server.matchmaking(this);
                         }
                         break;
                     } else {
-                        if (!server.authenticate(credentials[0],credentials[1])) {
-                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "User is already logged in on another device."));
+                        if (!server.authenticate(credentials[0],credentials[1]) && server.getToken(credentials[0]) != null) {
+                            sendMessage(new Message(Message.MessageType.AUTHENTICATION_INVALID, "User is already logged in on another device."));
+                            String token = server.getToken(credentials[0]);
+                            Message tokenMessage = receiveMessage();
+                            String tokenMess = (String) tokenMessage.getPayload();
+                            System.out.println(tokenMess);
+                            if(tokenMess.equalsIgnoreCase(token)){
+                                sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK,"Authenticated successfull."));
+                                break;
+                            } else {
+                                sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR,"Wrong token."));
+                                break;
+                            }
                         } else {
                             sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR, "Invalid username or password."));
                         }
@@ -100,29 +112,14 @@ public class ClientHandler implements Runnable {
                 } else if (authMessage.getMessageType() == Message.MessageType.REGISTRATION) {
                     String[] credentials = (String[]) authMessage.getPayload();
                     if (server.registerUser(credentials[0], credentials[1])) {
+                        //String token = server.getToken(credentials[0]);
+                        //sendMessage(new Message(Message.MessageType.REGISTRATION_ACK,token));
                         sendMessage(new Message(Message.MessageType.REGISTRATION_ACK, "Registration successful."));
                     } else {
                         sendMessage(new Message(Message.MessageType.REGISTRATION_ERROR, "Username already exists."));
                     }
                 }
             }
-
-            /*sendMessage(new Message(Message.MessageType.SELECT_GAME_MODE, null));
-            Message gameModeMessage = receiveMessage();
-
-            if (gameModeMessage.getMessageType() == Message.MessageType.SELECT_GAME_MODE) {
-                String gameMode = (String) gameModeMessage.getPayload();
-
-                // Proceed with the chosen game mode
-                if ("simple".equalsIgnoreCase(gameMode)) {
-                    server.matchmaking(this);
-                } else if ("rank".equalsIgnoreCase(gameMode)) {
-                    server.rankMatchmaking(this);
-                } else {
-                    sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
-                }
-            }*/
-
 
         } catch (IOException | ClassNotFoundException e) {
             // ...

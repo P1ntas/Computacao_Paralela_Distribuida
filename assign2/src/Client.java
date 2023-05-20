@@ -55,6 +55,13 @@ public class Client {
                 System.out.print("Enter your password: ");
                 String password = scanner.nextLine();
 
+                /*if(scanner.nextLine().equals("User is already logged in on another device.")){
+                    System.out.print("Enter your token: ");
+                    String token = scanner.nextLine();
+                    client.sendMessage(new Message(Message.MessageType.AUTHENTICATION, new String[]{token}));
+                    break;
+                }*/
+
                 if (action.equalsIgnoreCase("login")) {
                     client.sendMessage(new Message(Message.MessageType.AUTHENTICATION, new String[]{username, password}));
                 } else if (action.equalsIgnoreCase("register")) {
@@ -64,20 +71,31 @@ public class Client {
                     continue;
                 }
                 Message response = client.receiveMessage();
-                if (response.getMessageType() == Message.MessageType.AUTHENTICATION_ACK ||
-                        response.getMessageType() == Message.MessageType.REGISTRATION_ACK) {
-                    System.out.println(response.getPayload());
+                if (response.getMessageType() == Message.MessageType.AUTHENTICATION_ACK) {
+                    System.out.println("Here is your token: " + response.getPayload());
                     break;
+
+                } else if(response.getMessageType() == Message.MessageType.REGISTRATION_ACK){
+                    System.out.println(response.getPayload());
+
                 } else if (response.getMessageType() == Message.MessageType.AUTHENTICATION_ERROR ||
                         response.getMessageType() == Message.MessageType.REGISTRATION_ERROR) {
                     System.out.println(response.getPayload());
+
+                } else if (response.getMessageType() == Message.MessageType.AUTHENTICATION_INVALID){
+                    System.out.println(response.getPayload());
+                    System.out.print("Enter your token: ");
+                    String token = scanner.nextLine();
+                    client.sendMessage(new Message(Message.MessageType.AUTHENTICATION, token));
+                    break;
                 }
+
             }
 
             // Game communication
             Client clientInstance = client;
             while (true) {
-                System.out.println("select mode (Simple/Rank): ");
+                System.out.println("Select mode (Simple/Rank): ");
                 String mode = scanner.nextLine();
                 if (mode.equalsIgnoreCase("simple")) {
                     Message simple = new Message(Message.MessageType.SELECT_GAME_MODE, mode);
@@ -127,6 +145,9 @@ public class Client {
                     else if (messageText.equalsIgnoreCase("yes")) {
                         Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
                         client.sendMessage(message);
+                    }
+                    else if(!(messageText.equalsIgnoreCase("yes")||messageText.equalsIgnoreCase("no"))){
+                        System.out.print("Invalid input. Please enter 'yes' or 'no'.");
                     }
                     continue;
                 }

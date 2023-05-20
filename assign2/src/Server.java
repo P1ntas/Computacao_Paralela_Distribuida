@@ -19,6 +19,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.Iterator;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+
 
 
 public class Server {
@@ -31,6 +38,8 @@ public class Server {
     private Queue<ClientHandler> rankWaitingPlayers;
     private Set<String> loggedInUsers;
     private Map<String, Game> ongoingGames;
+    private final String TOKEN_FILE = "../databases/user_tokens.txt";
+    private Map<String, String> userTokens;
 
 
     public Server(int port) {
@@ -42,6 +51,8 @@ public class Server {
         loadUserData();
         this.loggedInUsers = new HashSet<>();
         this.ongoingGames = new ConcurrentHashMap<>();
+        userTokens = new HashMap<>();
+        loadUserTokens();
 
 
     }
@@ -82,16 +93,27 @@ public class Server {
                 return false; // User is already logged in
             } else {
                 loggedInUsers.add(username);
+                String token = generateNewToken();
+                userTokens.put(username, token);
+                saveUserTokens();
                 return true;
             }
         }
         return false;
     }
 
+
     public void logoutUser(String username) {
         synchronized (loggedInUsers) {
             loggedInUsers.remove(username);
+            // Remove the token
+            userTokens.remove(username);
+            saveUserTokens();
         }
+    }
+
+    public String getToken(String username) {
+        return userTokens.get(username);
     }
 
     public boolean registerUser(String username, String password) {
@@ -153,36 +175,47 @@ public class Server {
         }
     }
 
-    /*public void matchmaking(ClientHandler player) {
-        synchronized (waitingPlayers) {
-            User playerUser = registeredUsers.get(player.getUsername());
-            int playerScore = playerUser.getScore();
-
-            System.out.println(playerScore);
-
-            ClientHandler bestMatch = null;
-            int bestMatchDifference = Integer.MAX_VALUE;
-
-            for (ClientHandler waitingPlayer : waitingPlayers) {
-                User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
-                int waitingScore = waitingUser.getScore();
-                int scoreDifference = Math.abs(playerScore - waitingScore);
-
-                if (scoreDifference < bestMatchDifference) {
-                    bestMatchDifference = scoreDifference;
-                    bestMatch = waitingPlayer;
+    private void loadUserTokens() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(TOKEN_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(":");
+                if (data.length == 2) {
+                    userTokens.put(data[0], data[1]);
                 }
             }
-
-            if (bestMatch != null) {
-                waitingPlayers.remove(bestMatch);
-                Game game = new Game(player, bestMatch, this);
-                game.play();
-            } else {
-                waitingPlayers.add(player);
-            }
+        } catch (IOException e) {
+            System.err.println("Error loading user tokens: " + e.getMessage());
         }
-    }*/
+    }
+
+    private void saveUserTokens() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TOKEN_FILE))) {
+            for (Map.Entry<String, String> entry : userTokens.entrySet()) {
+                writer.write(entry.getKey() + ":" + entry.getValue());
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving user tokens: " + e.getMessage());
+        }
+    }
+
+    // Generate a new token
+    private String generateNewToken() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] token = new byte[20];
+        secureRandom.nextBytes(token);
+        return Base64.getEncoder().encodeToString(token);
+    }
+
+    public boolean authenticateByToken(String token) {
+        String username = userTokens.get(token);
+        if (username != null && !loggedInUsers.contains(username)) {
+            loggedInUsers.add(username);
+            return true;
+        }
+        return false;
+    }
 
     public void rankMatchmaking(ClientHandler player) {
         synchronized (rankWaitingPlayers) {
