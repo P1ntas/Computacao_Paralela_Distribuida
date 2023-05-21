@@ -26,7 +26,7 @@ This is a simple Java-based client-server application for a multiplayer game. It
 2. Run the server application. You can do this through the command line using the following command:
 
    ```bash
-   java Client
+   java Server
     ```
 
 3. Run the client application. You can do this through the command line using the following command:
