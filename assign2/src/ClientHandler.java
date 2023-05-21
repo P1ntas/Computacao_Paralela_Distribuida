@@ -99,6 +99,7 @@ public class ClientHandler implements Runnable {
                             //System.out.println(tokenMess);
                             if(tokenMess.equalsIgnoreCase(token)){
                                 game();
+                                break;
                             } else {
                                 sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR,"Wrong token."));
                                 break;
