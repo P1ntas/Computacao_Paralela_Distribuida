@@ -76,18 +76,17 @@ public class ClientHandler implements Runnable {
                             sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK, "Authenticated successfully."));
                             Message gameModeMessage = receiveMessage();
                             String gameMode = (String) gameModeMessage.getPayload();
-                            System.out.println("gameMode:"+ gameMode);
                             if (gameMode.equalsIgnoreCase("simple")) {
                                 server.simpleMatchmaking(this);
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
-                                break;
+
                             } else if ("rank".equalsIgnoreCase(gameMode)) {
+                                server.rankWaitingPlayers.add(this);
                                 server.rankMatchmaking(this);
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
-                                break;
+
                             } else {
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
-                                break;
                             }
                         }
                         break;
@@ -97,10 +96,9 @@ public class ClientHandler implements Runnable {
                             String token = server.getToken(credentials[0]);
                             Message tokenMessage = receiveMessage();
                             String tokenMess = (String) tokenMessage.getPayload();
-                            System.out.println(tokenMess);
+                            //System.out.println(tokenMess);
                             if(tokenMess.equalsIgnoreCase(token)){
-                                sendMessage(new Message(Message.MessageType.AUTHENTICATION_ACK,"Authenticated successfull."));
-                                break;
+                                game();
                             } else {
                                 sendMessage(new Message(Message.MessageType.AUTHENTICATION_ERROR,"Wrong token."));
                                 break;
@@ -141,4 +139,27 @@ public class ClientHandler implements Runnable {
             System.err.println("Error while closing resources: " + e.getMessage());
         }
     }
+
+    public void game(){
+        try {
+            Message gameModeMessage = receiveMessage();
+            String gameMode = (String) gameModeMessage.getPayload();
+            if (gameMode.equalsIgnoreCase("simple")) {
+                server.simpleMatchmaking(this);
+                sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
+            } else if ("rank".equalsIgnoreCase(gameMode)) {
+                server.rankWaitingPlayers.add(this);
+                server.rankMatchmaking(this);
+                sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
+            } else {
+                sendMessage(new Message(Message.MessageType.GAME_MODE_ERROR, "Invalid game mode selected."));
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // ...
+        } finally {
+            // ...
+        }
+
+    }
+
 }

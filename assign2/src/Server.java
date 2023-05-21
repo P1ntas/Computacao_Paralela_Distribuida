@@ -35,7 +35,7 @@ public class Server {
     private static final String USER_DATA_FILE = "../databases/users.txt";
     private Map<String, User> registeredUsers;
     private Queue<ClientHandler> simpleWaitingPlayers;
-    private Queue<ClientHandler> rankWaitingPlayers;
+    public Queue<ClientHandler> rankWaitingPlayers;
     private Set<String> loggedInUsers;
     private Map<String, Game> ongoingGames;
     private final String TOKEN_FILE = "../databases/user_tokens.txt";
@@ -217,32 +217,76 @@ public class Server {
         return false;
     }
 
-    public void rankMatchmaking(ClientHandler player) {
+    /*public void rankMatchmaking(ClientHandler player) {
         synchronized (rankWaitingPlayers) {
             User playerUser = registeredUsers.get(player.getUsername());
+            int playerScore = playerUser.getScore();
 
-            // Find an opponent with a similar level
-            ClientHandler opponent = null;
-            Iterator<ClientHandler> waitingPlayerIterator = rankWaitingPlayers.iterator();
-            while (waitingPlayerIterator.hasNext()) {
-                ClientHandler waitingPlayer = waitingPlayerIterator.next();
+            System.out.println(playerScore);
+
+            ClientHandler bestMatch = null;
+            int bestMatchDifference = Integer.MAX_VALUE;
+
+            for (ClientHandler waitingPlayer : rankWaitingPlayers) {
                 User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
+                int waitingScore = waitingUser.getScore();
+                int scoreDifference = Math.abs(playerScore - waitingScore);
 
-                // You can adjust the difference between the levels as needed.
-                if (Math.abs(playerUser.getLevel() - waitingUser.getLevel()) <= 5) {
-                    opponent = waitingPlayer;
-                    waitingPlayerIterator.remove();
-                    break;
+                if (scoreDifference < bestMatchDifference) {
+                    bestMatchDifference = scoreDifference;
+                    bestMatch = waitingPlayer;
                 }
             }
 
-            if (opponent != null) {
-                Game game = new Game(player, opponent, this, "rank");
+            if (bestMatch != null) {
+                rankWaitingPlayers.remove(bestMatch);
+                Game game = new Game(player, bestMatch, this, "rank");
                 game.play();
             } else {
                 rankWaitingPlayers.add(player);
             }
         }
+    }*/
+
+    public void rankMatchmaking(ClientHandler player) {
+        try {
+            Thread.sleep(3000); // sleeps for 30 seconds
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("kdjbcnvfdwkqlºsdpçclkjnc dsqlçpsdcvk jcdsaºscp okj");
+
+        synchronized (rankWaitingPlayers) {
+            User playerUser = registeredUsers.get(player.getUsername());
+            int playerScore = playerUser.getScore();
+            //System.out.println(playerScore);
+
+            ClientHandler opponent = null;
+            int range = 10;
+            int tries = 10;
+            while (tries > 0){
+                for (ClientHandler waitingPlayer : rankWaitingPlayers) {
+                    User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
+                    if (playerUser.getUsername() == waitingUser.getUsername()) continue;
+                    int waitingScore = waitingUser.getScore();
+                    int scoreDifference = Math.abs(playerScore - waitingScore);
+                    System.out.println("score: " + scoreDifference);
+                    if (scoreDifference <= range) {
+                        opponent = waitingPlayer;
+
+                    }
+                }
+                range += 50;
+                tries--;
+            }
+
+            if (opponent != null) {
+                rankWaitingPlayers.remove(opponent);
+                Game game = new Game(player, opponent, this, "rank");
+                game.play();
+            }
+        }
+
     }
 
 

@@ -55,12 +55,6 @@ public class Client {
                 System.out.print("Enter your password: ");
                 String password = scanner.nextLine();
 
-                /*if(scanner.nextLine().equals("User is already logged in on another device.")){
-                    System.out.print("Enter your token: ");
-                    String token = scanner.nextLine();
-                    client.sendMessage(new Message(Message.MessageType.AUTHENTICATION, new String[]{token}));
-                    break;
-                }*/
 
                 if (action.equalsIgnoreCase("login")) {
                     client.sendMessage(new Message(Message.MessageType.AUTHENTICATION, new String[]{username, password}));
