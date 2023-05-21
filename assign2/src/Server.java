@@ -166,13 +166,16 @@ public class Server {
     }
 
     public void simpleMatchmaking(ClientHandler player) {
-        simpleWaitingPlayers.add(player);
 
-        if (simpleWaitingPlayers.size() >= 2) {
-            ClientHandler player1 = simpleWaitingPlayers.poll();
-            ClientHandler player2 = simpleWaitingPlayers.poll();
+        synchronized (simpleWaitingPlayers) {
+            simpleWaitingPlayers.add(player);
 
-            startGame(player1, player2, "simple");
+            if (simpleWaitingPlayers.size() >= 2) {
+                ClientHandler player1 = simpleWaitingPlayers.poll();
+                ClientHandler player2 = simpleWaitingPlayers.poll();
+
+                startGame(player1, player2, "simple");
+            }
         }
     }
 
@@ -235,33 +238,33 @@ public class Server {
         System.out.println("kdjbcnvfdwkqlºsdpçclkjnc dsqlçpsdcvk jcdsaºscp okj");
 
         synchronized (rankWaitingPlayers) {
-            User playerUser = registeredUsers.get(player.getUsername());
-            int playerScore = playerUser.getScore();
-            //System.out.println(playerScore);
+            if (rankWaitingPlayers.size() >= 2) {
+                User playerUser = registeredUsers.get(player.getUsername());
+                int playerScore = playerUser.getScore();
+                ClientHandler opponent = null;
+                int range = 10;
+                int tries = 10;
+                while (tries > 0) {
+                    for (ClientHandler waitingPlayer : rankWaitingPlayers) {
+                        User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
+                        if (playerUser.getUsername() == waitingUser.getUsername()) continue;
+                        int waitingScore = waitingUser.getScore();
+                        int scoreDifference = Math.abs(playerScore - waitingScore);
+                        System.out.println("score: " + scoreDifference);
+                        if (scoreDifference <= range) {
+                            opponent = waitingPlayer;
 
-            ClientHandler opponent = null;
-            int range = 10;
-            int tries = 10;
-            while (tries > 0){
-                for (ClientHandler waitingPlayer : rankWaitingPlayers) {
-                    User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
-                    if (playerUser.getUsername() == waitingUser.getUsername()) continue;
-                    int waitingScore = waitingUser.getScore();
-                    int scoreDifference = Math.abs(playerScore - waitingScore);
-                    System.out.println("score: " + scoreDifference);
-                    if (scoreDifference <= range) {
-                        opponent = waitingPlayer;
-
+                        }
                     }
+                    range += 50;
+                    tries--;
                 }
-                range += 50;
-                tries--;
-            }
 
-            if (opponent != null) {
-                rankWaitingPlayers.remove(opponent);
-                Game game = new Game(player, opponent, this, "rank");
-                game.play();
+                if (opponent != null) {
+                    rankWaitingPlayers.remove(opponent);
+                    Game game = new Game(player, opponent, this, "rank");
+                    game.play();
+                }
             }
         }
 
