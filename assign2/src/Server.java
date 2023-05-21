@@ -1,7 +1,7 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.HashMap;
 import java.util.Map;
 import java.io.BufferedReader;
@@ -14,10 +14,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.Iterator;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -27,30 +23,32 @@ import java.io.FileReader;
 import java.io.FileWriter;
 
 
-
 public class Server {
     private int port;
     private ServerSocket serverSocket;
-    private ExecutorService executorService;
+    private final ReentrantLock lock = new ReentrantLock();
+    private final ThreadPool threadPool;
+    private final LinkedList<Runnable> tasks = new LinkedList<>();
+    private boolean isRunning = true;
     private static final String USER_DATA_FILE = "../databases/users.txt";
     private Map<String, User> registeredUsers;
     private Queue<ClientHandler> simpleWaitingPlayers;
     public Queue<ClientHandler> rankWaitingPlayers;
     private Set<String> loggedInUsers;
-    private Map<String, Game> ongoingGames;
+    private CustomConcurrentHashMap<String, Game> ongoingGames;
     private final String TOKEN_FILE = "../databases/user_tokens.txt";
     private Map<String, String> userTokens;
 
 
     public Server(int port) {
         this.port = port;
-        this.executorService = Executors.newFixedThreadPool(5);
+        threadPool = CustomExecutors.newFixedThreadPool(5);
         registeredUsers = new HashMap<>();
         simpleWaitingPlayers = new LinkedList<>();
         rankWaitingPlayers = new LinkedList<>();
         loadUserData();
         this.loggedInUsers = new HashSet<>();
-        this.ongoingGames = new ConcurrentHashMap<>();
+        this.ongoingGames = new CustomConcurrentHashMap<>();
         userTokens = new HashMap<>();
         loadUserTokens();
 
@@ -61,18 +59,22 @@ public class Server {
         serverSocket = new ServerSocket(port);
         System.out.println("Server started on port " + port);
 
-        while (true) {
+        while (isRunning) {
             try {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress());
 
                 ClientHandler clientHandler = new ClientHandler(clientSocket, this);
-                executorService.submit(clientHandler);
+                threadPool.execute(clientHandler);
 
             } catch (IOException e) {
                 System.err.println("Error while accepting client connection: " + e.getMessage());
             }
         }
+    }
+
+    public void schedule(Runnable runnable) {
+        threadPool.execute(runnable);
     }
 
     public static void main(String[] args) {
@@ -250,7 +252,7 @@ public class Server {
 
     public void rankMatchmaking(ClientHandler player) {
         try {
-            Thread.sleep(3000); // sleeps for 30 seconds
+            CustomTimeUnit.SECONDS.sleep(3); // sleeps for 30 seconds
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -301,11 +303,16 @@ public class Server {
     public void scheduleGameRemoval(String username, int timeout) {
         Game game = ongoingGames.get(username);
         if (game != null) {
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-            scheduler.schedule(() -> {
-                removeOngoingGame(username);
-                game.closeIfDisconnected(); // Close the game if both players are disconnected
-            }, timeout, TimeUnit.SECONDS);
+            Thread removalThread = new Thread(() -> {
+                try {
+                    CustomTimeUnit.SECONDS.sleep(timeout * 3); // Sleeps for the timeout in seconds
+                    removeOngoingGame(username);
+                    game.closeIfDisconnected(); // Close the game if both players are disconnected
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+            removalThread.start();
         }
     }
 
