@@ -231,7 +231,7 @@ public class Server {
 
     public void rankMatchmaking(ClientHandler player) {
 
-            //rankWaitingPlayers.add(player);
+        rankWaitingPlayers.add(player);
         boolean tester = false;
         ClientHandler opponent = null;
 

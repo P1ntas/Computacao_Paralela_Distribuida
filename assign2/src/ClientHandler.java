@@ -81,7 +81,6 @@ public class ClientHandler implements Runnable {
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
 
                             } else if ("rank".equalsIgnoreCase(gameMode)) {
-                                server.rankWaitingPlayers.add(this);
                                 server.rankMatchmaking(this);
                                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
 
@@ -148,9 +147,6 @@ public class ClientHandler implements Runnable {
                 server.simpleMatchmaking(this);
                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
             } else if ("rank".equalsIgnoreCase(gameMode)) {
-                synchronized (server.rankWaitingPlayers) {
-                    server.rankWaitingPlayers.add(this);
-                }
                 server.rankMatchmaking(this);
                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
             } else {
