@@ -166,15 +166,22 @@ public class Server {
     }
 
     public void simpleMatchmaking(ClientHandler player) {
-        synchronized (simpleWaitingPlayers) {
-            if (!simpleWaitingPlayers.isEmpty()) {
-                ClientHandler opponent = simpleWaitingPlayers.poll();
-                Game game = new Game(player, opponent, this, "simple");
-                game.play();
-            } else {
-                simpleWaitingPlayers.add(player);
-            }
+        simpleWaitingPlayers.add(player);
+
+        if (simpleWaitingPlayers.size() >= 2) {
+            ClientHandler player1 = simpleWaitingPlayers.poll();
+            ClientHandler player2 = simpleWaitingPlayers.poll();
+
+            startGame(player1, player2, "simple");
         }
+    }
+
+    private void startGame(ClientHandler player1, ClientHandler player2, String mode) {
+        Game game = new Game(player1, player2, this, mode);
+        ongoingGames.put(player1.getUsername(), game);
+        ongoingGames.put(player2.getUsername(), game);
+
+        new Thread(game::play).start();
     }
 
     private void loadUserTokens() {
@@ -218,37 +225,6 @@ public class Server {
         }
         return false;
     }
-
-    /*public void rankMatchmaking(ClientHandler player) {
-        synchronized (rankWaitingPlayers) {
-            User playerUser = registeredUsers.get(player.getUsername());
-            int playerScore = playerUser.getScore();
-
-            System.out.println(playerScore);
-
-            ClientHandler bestMatch = null;
-            int bestMatchDifference = Integer.MAX_VALUE;
-
-            for (ClientHandler waitingPlayer : rankWaitingPlayers) {
-                User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
-                int waitingScore = waitingUser.getScore();
-                int scoreDifference = Math.abs(playerScore - waitingScore);
-
-                if (scoreDifference < bestMatchDifference) {
-                    bestMatchDifference = scoreDifference;
-                    bestMatch = waitingPlayer;
-                }
-            }
-
-            if (bestMatch != null) {
-                rankWaitingPlayers.remove(bestMatch);
-                Game game = new Game(player, bestMatch, this, "rank");
-                game.play();
-            } else {
-                rankWaitingPlayers.add(player);
-            }
-        }
-    }*/
 
     public void rankMatchmaking(ClientHandler player) {
         try {
