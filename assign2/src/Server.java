@@ -230,43 +230,50 @@ public class Server {
     }
 
     public void rankMatchmaking(ClientHandler player) {
-        try {
-            CustomTimeUnit.SECONDS.sleep(3); // sleeps for 30 seconds
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        System.out.println("kdjbcnvfdwkqlºsdpçclkjnc dsqlçpsdcvk jcdsaºscp okj");
 
-        synchronized (rankWaitingPlayers) {
+            //rankWaitingPlayers.add(player);
+        boolean tester = false;
+        ClientHandler opponent = null;
+
+            try {
+                CustomTimeUnit.SECONDS.sleep(5); // sleeps for 30 seconds
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            synchronized (rankWaitingPlayers) {
+
             if (rankWaitingPlayers.size() >= 2) {
                 User playerUser = registeredUsers.get(player.getUsername());
                 int playerScore = playerUser.getScore();
-                ClientHandler opponent = null;
-                int range = 10;
+                int range = 20;
                 int tries = 10;
                 while (tries > 0) {
                     for (ClientHandler waitingPlayer : rankWaitingPlayers) {
                         User waitingUser = registeredUsers.get(waitingPlayer.getUsername());
-                        if (playerUser.getUsername() == waitingUser.getUsername()) continue;
+                        if (playerUser.getUsername().equals(waitingUser.getUsername())) continue;
                         int waitingScore = waitingUser.getScore();
                         int scoreDifference = Math.abs(playerScore - waitingScore);
-                        System.out.println("score: " + scoreDifference);
                         if (scoreDifference <= range) {
                             opponent = waitingPlayer;
-
+                            tries = 0;
                         }
                     }
-                    range += 50;
+                    range += 30;
                     tries--;
                 }
 
                 if (opponent != null) {
+                    System.out.println("Start Game");
                     rankWaitingPlayers.remove(opponent);
-                    Game game = new Game(player, opponent, this, "rank");
-                    game.play();
+                    rankWaitingPlayers.remove(player);
+                    tester = true;
+
                 }
+                else System.out.println("No player found matching your skill bracket");
             }
         }
+            if (tester) startGame(player, opponent, "rank");
 
     }
 

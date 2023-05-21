@@ -27,7 +27,6 @@ public class Game {
                 player1.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
                 Message response = player1.receiveMessage();
                 rematchResponses[0] = "yes".equalsIgnoreCase(response.getPayload().toString());
-                System.out.println(rematchResponses[0]);
 
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -40,7 +39,6 @@ public class Game {
                 player2.sendMessage(new Message(Message.MessageType.GAME_UPDATE, "Do you want to play again? (yes/no)"));
                 Message response = player2.receiveMessage();
                 rematchResponses[1] = "yes".equalsIgnoreCase(response.getPayload().toString());
-                System.out.println(rematchResponses[1]);
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
                 rematchResponses[1] = false;
@@ -95,8 +93,6 @@ public class Game {
 
         Message player1Result = new Message(Message.MessageType.GAME_END, player1Wins ? "You won!" : "You lost!");
         Message player2Result = new Message(Message.MessageType.GAME_END, player1Wins ? "You lost!" : "You won!");
-
-        System.out.println("result1: "+ player1Wins); // false
 
         if (mode.equals("rank")) {
             if (player1Wins) {

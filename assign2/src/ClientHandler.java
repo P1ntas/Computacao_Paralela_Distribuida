@@ -96,7 +96,6 @@ public class ClientHandler implements Runnable {
                             String token = server.getToken(credentials[0]);
                             Message tokenMessage = receiveMessage();
                             String tokenMess = (String) tokenMessage.getPayload();
-                            //System.out.println(tokenMess);
                             if(tokenMess.equalsIgnoreCase(token)){
                                 game();
                                 break;
@@ -149,7 +148,9 @@ public class ClientHandler implements Runnable {
                 server.simpleMatchmaking(this);
                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Simple mode selected."));
             } else if ("rank".equalsIgnoreCase(gameMode)) {
-                server.rankWaitingPlayers.add(this);
+                synchronized (server.rankWaitingPlayers) {
+                    server.rankWaitingPlayers.add(this);
+                }
                 server.rankMatchmaking(this);
                 sendMessage(new Message(Message.MessageType.GAME_MODE_ACK, "Rank mode selected."));
             } else {
