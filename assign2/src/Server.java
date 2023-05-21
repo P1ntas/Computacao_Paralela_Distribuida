@@ -236,7 +236,7 @@ public class Server {
         ClientHandler opponent = null;
 
             try {
-                CustomTimeUnit.SECONDS.sleep(5); // sleeps for 30 seconds
+                CustomTimeUnit.SECONDS.sleep(5);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

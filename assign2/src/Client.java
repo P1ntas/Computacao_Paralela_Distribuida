@@ -132,18 +132,26 @@ public class Client {
                     client.sendMessage(message);
                 }
                 if ("Do you want to play again? (yes/no)".equals(receivedMessage.getPayload())) {
-                    System.out.print("Enter a message to send (or type 'exit' to quit): ");
-                    String messageText = scanner.nextLine();
-                    if (messageText.equalsIgnoreCase("no")) break;
+                    String messageText;
+                    do {
+                        System.out.print("Enter a message to send (or type 'exit' to quit): ");
+                        messageText = scanner.nextLine();
 
-                    else if (messageText.equalsIgnoreCase("yes")) {
-                        Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
-                        client.sendMessage(message);
-                    }
-                    else if(!(messageText.equalsIgnoreCase("yes")||messageText.equalsIgnoreCase("no"))){
-                        System.out.print("Invalid input. Please enter 'yes' or 'no'.");
-                    }
-                    continue;
+                        if (messageText.equalsIgnoreCase("no")) {
+                            client.close();
+                            scanner.close();
+                            System.out.println("Disconnected from the server.");
+                            return; // terminate main function
+                        }
+
+                        if (messageText.equalsIgnoreCase("yes")) {
+                            Message message = new Message(Message.MessageType.GAME_ACTION, messageText);
+                            client.sendMessage(message);
+                            break;
+                        }
+                        System.out.println("Invalid input. Please enter 'yes' or 'no'.");
+                        System.out.println("Do you want to play again? (yes/no)");
+                    } while (true); // continue asking until a valid response is provided
                 }
 
             }
