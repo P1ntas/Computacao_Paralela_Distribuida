@@ -1,6 +1,6 @@
 aaa:aaa:10
 ccc:ccc:0
-bbb:bbb:0
-iii:iii:100
-admin:admin:110
-ooo:ooo:4
+bbb:bbb:-5
+iii:iii:105
+admin:admin:30
+ooo:ooo:-5
